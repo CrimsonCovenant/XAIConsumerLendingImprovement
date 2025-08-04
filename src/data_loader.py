@@ -4,17 +4,7 @@ import yaml
 import time
 
 def load_hmda_data_from_csv(year, config_path='config/config.yml'):
-    """
-    Loads a single year of HMDA data from a CSV file.
-
-    Args:
-        year (int): The year of the data to load.
-        config_path (str): The path to the configuration file.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing the HMDA data for the specified year.
-    """
-    print(f"--- Starting data load for year: {year} ---")
+    print(f"Starting data load for year: {year}")
     
     # Load configuration
     try:
@@ -33,12 +23,20 @@ def load_hmda_data_from_csv(year, config_path='config/config.yml'):
         print(f"Error: Data file not found at {full_path}")
         return None
 
+    # Get the optimized dtypes from the config file
+    try:
+        dtypes = config['optimized_dtypes']
+        print("Found optimized dtypes in config")
+    except KeyError:
+        dtypes = None
+        print("'optimized_dtypes' not found in config. Loading with default types.")
+
+
     # Load the data and time the process
     start_time = time.time()
     try:
-        # For large CSVs, using an efficient engine and specifying dtypes can help
-        # For now, we'll do a basic load and assess performance
-        df = pd.read_csv(full_path)
+        # Use the specified dtypes to load the data efficiently
+        df = pd.read_csv(full_path, dtype=dtypes)
         end_time = time.time()
         
         print(f"Successfully loaded {file_name}")

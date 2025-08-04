@@ -1,6 +1,4 @@
-# -------------------------------------------------
 #               FILE PATHS
-# -------------------------------------------------
 # This section defines the directory structure for the project.
 data:
   raw: 'data/raw/'
@@ -15,10 +13,89 @@ outputs:
 
 src: 'src/'
 
-# -------------------------------------------------
 #              DATA SETTINGS
-# -------------------------------------------------
-# This section defines parameters for data loading and processing.
 hmda_data:
   target_variable: 'action_taken'
   initial_year_to_load: 2008 # Start with one year for initial analysis
+
+
+#           DATA TYPE OPTIMIZATION
+optimized_dtypes:
+    action_taken: int8
+    action_taken_name: category
+    agency_abbr: category
+    agency_code: int8
+    agency_name: category
+    applicant_ethnicity: int8
+    applicant_ethnicity_name: category
+    applicant_income_000s: float32
+    applicant_race_1: int8
+    applicant_race_2: float32
+    applicant_race_3: float32
+    applicant_race_4: float32
+    applicant_race_5: float32
+    applicant_race_name_1: category
+    applicant_race_name_2: category
+    applicant_race_name_3: category
+    applicant_race_name_4: category
+    applicant_race_name_5: category
+    applicant_sex: int8
+    applicant_sex_name: category
+    application_date_indicator: int8
+    as_of_year: int16
+    census_tract_number: float32
+    co_applicant_ethnicity: int8
+    co_applicant_ethnicity_name: category
+    co_applicant_race_1: int8
+    co_applicant_race_2: float32
+    co_applicant_race_3: float32
+    co_applicant_race_4: float32
+    co_applicant_race_5: float32
+    co_applicant_race_name_1: category
+    co_applicant_race_name_2: category
+    co_applicant_race_name_3: category
+    co_applicant_race_name_4: category
+    co_applicant_race_name_5: category
+    co_applicant_sex: int8
+    co_applicant_sex_name: category
+    county_code: float32
+    county_name: category
+    denial_reason_1: float32
+    denial_reason_2: float32
+    denial_reason_3: float32
+    denial_reason_name_1: category
+    denial_reason_name_2: category
+    denial_reason_name_3: category
+    edit_status: float32
+    edit_status_name: category
+    hoepa_status: int8
+    hoepa_status_name: category
+    hud_median_family_income: float32
+    lien_status: int8
+    lien_status_name: category
+    loan_amount_000s: int32
+    loan_purpose: int8
+    loan_purpose_name: category
+    loan_type: int8
+    loan_type_name: category
+    minority_population: float32
+    msamd: float32
+    msamd_name: category
+    number_of_1_to_4_family_units: float32
+    number_of_owner_occupied_units: float32
+    owner_occupancy: int8
+    owner_occupancy_name: category
+    population: float32
+    preapproval: int8
+    preapproval_name: category
+    property_type: int8
+    property_type_name: category
+    purchaser_type: int8
+    purchaser_type_name: category
+    rate_spread: float32
+    respondent_id: category
+    sequence_number: int32
+    state_abbr: category
+    state_code: float32
+    state_name: category
+    tract_to_msamd_income: float32
