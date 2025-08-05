@@ -58,6 +58,19 @@ def main():
     
     print("\nClassification Report:")
     print(classification_report(y_test, y_pred))
+    
+    model_dir = config['outputs']['models']
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+        
+    model_path = os.path.join(model_dir, f'logistic_regression_{year}.pkl')
+    print(f"Saving trained model to {model_path}")
+    
+    import pickle
+    with open(model_path, 'wb') as f:
+        pickle.dump(model, f)
+    
+    print("Model saved successfully.")
 
 if __name__ == '__main__':
     main()
