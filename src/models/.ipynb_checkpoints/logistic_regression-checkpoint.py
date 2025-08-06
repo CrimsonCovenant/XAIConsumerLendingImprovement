@@ -1,9 +1,6 @@
 import numpy as np
 
 class LogisticRegression:
-    """
-    A Logistic Regression model implemented from scratch.
-    """
     def __init__(self, learning_rate=0.01, n_iterations=1000, verbose=False):
         self.learning_rate = learning_rate
         self.n_iterations = n_iterations
@@ -55,7 +52,7 @@ class LogisticRegression:
         return (probabilities >= threshold).astype(int)
         
     def _compute_cost(self, X, y):
-        """Private method to compute the NLL (cross-entropy) cost."""
+        """Private method to compute the NLL cost."""
         n_samples = len(y)
         linear_model = np.dot(X, self.weights) + self.bias
         y_predicted = self._sigmoid(linear_model)
@@ -63,3 +60,6 @@ class LogisticRegression:
         epsilon = 1e-9
         cost = (-1/n_samples) * np.sum(y * np.log(y_predicted + epsilon) + (1-y) * np.log(1 - y_predicted + epsilon))
         return cost
+    def get_params(self):
+        """Returns the learned weights and bias."""
+        return self.weights, self.bias
