@@ -25,7 +25,7 @@ def main():
     year = config['hmda_data']['initial_year_to_load']
     data_path = os.path.join(processed_path, f"processed_{year}.csv")
     
-    print(f"--- Loading data from {data_path} ---")
+    print(f"Loading data from {data_path}")
     df = pd.read_csv(data_path)
     df_dummies = pd.get_dummies(df, drop_first=True)
     

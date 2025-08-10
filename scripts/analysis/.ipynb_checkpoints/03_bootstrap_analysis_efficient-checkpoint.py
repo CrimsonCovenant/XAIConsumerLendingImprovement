@@ -55,7 +55,7 @@ def main():
 
     coefs_df = pd.DataFrame(bootstrap_coefs, columns=feature_names)
 
-    # --- Analyze and Visualize Results (same as before) ---
+    # Analyze and Visualize Results same as before
     print("Analyzing Bootstrap Results")
     results = pd.DataFrame({
         'Mean': coefs_df.mean(),
