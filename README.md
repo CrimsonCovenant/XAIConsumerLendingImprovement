@@ -2,13 +2,13 @@
 
 ## 1. Project Goal
 
-This project develops and validates a framework for **statistically rigorous Explainable AI (XAI)** in the context of high-stakes financial models. The central goal is to move beyond standard model explanations by quantifying their statistical uncertainty and systematically detecting **"explanation drift"**—significant changes in a model's decision-making logic over time. By building all machine learning and statistical analysis algorithms from scratch, this work provides a foundational understanding of how to build more trustworthy and reliable AI systems for deployment in dynamic, regulated environments like consumer lending.
+This project develops and validates a framework for **statistically rigorous Explainable AI** in the context of high-stakes financial models. The central goal is to move beyond standard model explanations by quantifying their statistical uncertainty and systematically detecting **"explanation drift"**—significant changes in a model's decision-making logic over time. By building all machine learning and statistical analysis algorithms from scratch, this work provides a foundational understanding of how to build more trustworthy and reliable AI systems for deployment in dynamic, regulated environments like consumer lending.
 
 ---
 
 ## 2. Challenges
 
-The primary challenge was analyzing the **Home Mortgage Disclosure Act (HMDA) dataset** from 2008 to 2024. This presented several significant hurdles:
+The primary challenge was analyzing the **Home Mortgage Disclosure Act dataset** from 2008 to 2024. This presented several significant hurdles:
 * **Massive Data Volume**: Each yearly file contains millions of rows, with the full dataset exceeding 100 GB. Processing this data required highly memory-efficient wrangling techniques.
 * **Inconsistent Data Schemas**: A major regulatory overhaul in 2018 completely changed the data's structure, column names, and feature definitions. A robust schema mapping strategy was required to create a consistent, unified dataset suitable for longitudinal analysis.
 * **Data Leakage**: Initial models achieved unrealistic 100% accuracy, which was traced back to data leakage from features like `rate_spread` that are only available post-decision. Identifying and removing these features was critical.
