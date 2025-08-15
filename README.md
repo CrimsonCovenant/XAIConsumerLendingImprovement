@@ -1,4 +1,4 @@
-# Statistically Rigorous XAI for Financial Models Under Drift
+# Model For XAI for Financial Models Under Drift
 
 ## 1. Project Goal
 
@@ -9,6 +9,7 @@ This project develops and validates a framework for **statistically rigorous Exp
 ## 2. Challenges
 
 The primary challenge was analyzing the **Home Mortgage Disclosure Act dataset** from 2008 to 2024. This presented several significant hurdles:
+
 * **Massive Data Volume**: Each yearly file contains millions of rows, with the full dataset exceeding 100 GB. Processing this data required highly memory-efficient wrangling techniques.
 * **Inconsistent Data Schemas**: A major regulatory overhaul in 2018 completely changed the data's structure, column names, and feature definitions. A robust schema mapping strategy was required to create a consistent, unified dataset suitable for longitudinal analysis.
 * **Data Leakage**: Initial models achieved unrealistic 100% accuracy, which was traced back to data leakage from features like `rate_spread` that are only available post-decision. Identifying and removing these features was critical.
@@ -20,28 +21,22 @@ The primary challenge was analyzing the **Home Mortgage Disclosure Act dataset**
 
 All algorithms were implemented from scratch in Python using only foundational libraries like NumPy and Pandas, based on the mathematical principles from the provided lecture materials.
 
-* **Core Model: Logistic Regression**
-    The loan approval status was modeled as a binary classification problem. The logistic regression model uses a **sigmoid function** to map a linear combination of features to a probability:
-    $$
-    p(y=1 | \mathbf{x}, \beta) = \sigma(\beta^T \mathbf{x}) = \frac{1}{1 + e^{-\beta^T \mathbf{x}}}
-    $$
-    The model was trained by minimizing the **Negative Log-Likelihood (NLL)** loss function using **Gradient Descent**:
-    $$
-    \mathcal{L}(\beta) = -\sum_{i=1}^{n} \left[ y_i \log(p_i) + (1 - y_i) \log(1 - p_i) \right]
-    $$
+* **Core Model: Logistic Regression**  
+  The loan approval status was modeled as a binary classification problem. The logistic regression model uses a **sigmoid function** to map a linear combination of features to a probability:  
+  $p(y=1 \mid \mathbf{x}, \boldsymbol{\beta}) \;=\; \sigma(\boldsymbol{\beta}^\top \mathbf{x}) \;=\; \dfrac{1}{1 + e^{-\boldsymbol{\beta}^\top \mathbf{x}}}$  
+  The model was trained by minimizing the **Negative Log-Likelihood (NLL)** using **Gradient Descent**:  
+  $\mathcal{L}(\boldsymbol{\beta}) \;=\; -\sum_{i=1}^{n} \Big[ y_i \log(p_i) + (1 - y_i)\log(1 - p_i) \Big]$
 
-* **Statistical Robustness: Bootstrapping**
-    To quantify the uncertainty of the model's learned feature importances (the coefficients $\beta$), we used **bootstrapping**. This process involves:
-    1.  Creating 100 new datasets by resampling the original data with replacement.
-    2.  Training a new logistic regression model on each of these datasets.
-    3.  Collecting the learned coefficients ($\beta$) from all 100 models to form a distribution for each feature.
-    From these distributions, we calculated the mean, standard deviation, and a 95% confidence interval for each feature's importance.
+* **Statistical Robustness: Bootstrapping**  
+  To quantify the uncertainty of the model’s learned feature importances (the coefficients $\boldsymbol{\beta}$), we used **bootstrapping**. This process involves:
+  1. Creating 100 new datasets by resampling the original data with replacement.
+  2. Training a new logistic regression model on each dataset.
+  3. Collecting the learned coefficients ($\boldsymbol{\beta}$) from all 100 models to form a distribution for each feature.  
+  From these distributions, we calculated the mean, standard deviation, and a 95% confidence interval for each feature’s importance.
 
-* **Drift Detection: Welch's t-test**
-    To determine if a feature's importance had drifted significantly between two years (e.g., 2008 vs. 2022), we compared their bootstrap distributions. We implemented **Welch's t-test** from scratch to test the null hypothesis that the two distributions have the same mean. A **p-value < 0.05** was used to indicate a statistically significant drift.
-    $$
-    t = \frac{\bar{X}_1 - \bar{X}_2}{\sqrt{\frac{s_1^2}{N_1} + \frac{s_2^2}{N_2}}}
-    $$
+* **Drift Detection: Welch’s t-test**  
+  To determine if a feature’s importance drifted significantly between two years (e.g., 2008 vs. 2022), we compared their bootstrap distributions with **Welch’s t-test** (implemented from scratch) to test the null hypothesis that the two means are equal (significance threshold **p-value < 0.05**):  
+  $t \;=\; \dfrac{\bar{x}_1 - \bar{x}_2}{\sqrt{\dfrac{s_1^2}{N_1} + \dfrac{s_2^2}{N_2}}}$
 
 ---
 
@@ -49,14 +44,15 @@ All algorithms were implemented from scratch in Python using only foundational l
 
 The project successfully developed a complete, end-to-end pipeline to analyze explanation drift. The data wrangling challenges were overcome by creating specialized, memory-efficient data loaders and a schema mapping strategy. The computational bottleneck of bootstrapping was solved by training on smaller, random subsamples.
 
-The final analysis produced a clear narrative of how the lending model's logic evolved from 2008 to 2024:
+The final analysis produced a clear narrative of how the lending model’s logic evolved from 2008 to 2024:
 
-* **Post-Crisis Volatility (2008-2012)**: The model's logic was highly volatile, with the importance of key features like `loan_amount` and `occupancy_type` reversing their roles entirely as the market reacted to the financial crisis.
-* **Period of Stabilization (2013-2017)**: The model's logic began to stabilize, with an increasing number of features showing no significant year-over-year drift. `Income` became the most dominant positive predictor of loan approval.
-* **Schema Change Shock (2017-2018)**: A major regulatory change to the HMDA data collection resulted in a massive, statistically significant drift across every single feature, forcing the model to learn a fundamentally new logic.
-* **The "New Normal" (2019-2024)**: In the most recent period, the model's logic has reached a high degree of stability. Key financial indicators like `income` and risk factors like `hoepa_status` now show no significant drift, indicating a mature and consistent lending environment as interpreted by the model.
+* **Post-Crisis Volatility (2008–2012)**: The model’s logic was highly volatile, with the importance of key features like `loan_amount` and `occupancy_type` reversing their roles as the market reacted to the financial crisis.
+* **Period of Stabilization (2013–2017)**: The model’s logic began to stabilize, with an increasing number of features showing no significant year-over-year drift. `income` became the most dominant positive predictor of loan approval.
+* **Schema Change Shock (2017–2018)**: A major regulatory change to the HMDA data collection resulted in a large, statistically significant drift across most features, forcing the model to learn a fundamentally new logic.
+* **The “New Normal” (2019–2024)**: In the most recent period, the model’s logic reached a higher degree of stability. Key financial indicators like `income` and risk factors like `hoepa_status` showed little to no significant drift, indicating a more consistent lending environment as interpreted by the model.
 
-This project successfully demonstrates a robust, statistically grounded method for monitoring the explanations of machine learning models over time, providing a critical tool for ensuring the reliability and trustworthiness of AI in finance.
+This project demonstrates a robust, statistically grounded method for monitoring the explanations of machine learning models over time, providing a critical tool for ensuring the reliability and trustworthiness of AI in finance.
 
 ### Example Visualization: Explanation Drift (2008 vs 2024)
 ![Drift Analysis 2008 vs 2024](outputs/visualizations/drift_analysis_2008_vs_2024.png)
+
