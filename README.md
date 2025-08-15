@@ -1,4 +1,4 @@
-# Model For XAI for Financial Models Under Drift
+# Financial Models Under Drift
 
 ## 1. Project Goal
 
