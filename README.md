@@ -1,58 +1,171 @@
-# Financial Models Under Drift
+# Explanation Drift in Consumer Lending Models
 
-## 1. Project Goal
+> **Statistically rigorous XAI applied to 17 years of HMDA mortgage data (2008–2024)**
 
-This project develops and validates a framework for **statistically rigorous Explainable AI** in the context of high-stakes financial models. The central goal is to move beyond standard model explanations by quantifying their statistical uncertainty and systematically detecting **"explanation drift"**—significant changes in a model's decision-making logic over time. By building all machine learning and statistical analysis algorithms from scratch, this work provides a foundational understanding of how to build more trustworthy and reliable AI systems for deployment in dynamic, regulated environments like consumer lending.
+## Overview
 
----
+This project builds a full pipeline for detecting **explanation drift** — statistically significant changes in *why* a model makes decisions, not just *what* it predicts. We train two parallel model architectures on Home Mortgage Disclosure Act (HMDA) data across all 17 years from 2008 to 2024, then compare how each model's internal logic shifts over time using bootstrapped confidence intervals, Welch's *t*-tests, and Integrated Gradients.
 
-## 2. Challenges
-
-The primary challenge was analyzing the **Home Mortgage Disclosure Act dataset** from 2008 to 2024. This presented several significant hurdles:
-
-* **Massive Data Volume**: Each yearly file contains millions of rows, with the full dataset exceeding 100 GB. Processing this data required highly memory-efficient wrangling techniques.
-* **Inconsistent Data Schemas**: A major regulatory overhaul in 2018 completely changed the data's structure, column names, and feature definitions. A robust schema mapping strategy was required to create a consistent, unified dataset suitable for longitudinal analysis.
-* **Data Leakage**: Initial models achieved unrealistic 100% accuracy, which was traced back to data leakage from features like `rate_spread` that are only available post-decision. Identifying and removing these features was critical.
-* **Computational Intensity**: The core statistical method, bootstrapping, required training hundreds of models. An initial 12-hour runtime for a single year's analysis was a major bottleneck that necessitated significant code optimization.
+The result is a quantitative audit trail showing exactly how lending decision factors evolved through the 2008 financial crisis, the post-crisis recovery, the 2018 regulatory schema overhaul, the COVID-era rate environment, and the 2022–2024 tightening cycle.
 
 ---
 
-## 3. Methodology & Core Algorithms
+## Architecture
 
-All algorithms were implemented from scratch in Python using only foundational libraries like NumPy and Pandas, based on the mathematical principles from the provided lecture materials.
+```
+data/raw/            ← 186 GB of HMDA LAR CSVs (2008–2024)
+data/processed/      ← Cleaned parquets (one per year)
 
-* **Core Model: Logistic Regression**  
-  The loan approval status was modeled as a binary classification problem. The logistic regression model uses a **sigmoid function** to map a linear combination of features to a probability:  
-  $p(y=1 \mid \mathbf{x}, \boldsymbol{\beta}) \;=\; \sigma(\boldsymbol{\beta}^\top \mathbf{x}) \;=\; \dfrac{1}{1 + e^{-\boldsymbol{\beta}^\top \mathbf{x}}}$  
-  The model was trained by minimizing the **Negative Log-Likelihood (NLL)** using **Gradient Descent**:  
-  $\mathcal{L}(\boldsymbol{\beta}) \;=\; -\sum_{i=1}^{n} \Big[ y_i \log(p_i) + (1 - y_i)\log(1 - p_i) \Big]$
+src/
+├── features/        ← Preprocessing, WOE pipeline, FT-Transformer preprocessor
+├── models/          ← Logistic regression (from scratch), FT-Transformer ensemble
+├── drift/           ← Welch's t-test, drift detection
+├── explainability/  ← Integrated Gradients, bootstrap attribution
+├── fairness/        ← Adverse Impact Ratio (AIR) metrics
+├── viz/             ← Plotting style system, caption generation
+├── data_loaders/    ← Schema-aware HMDA loaders (pre/post-2018)
+└── utils/           ← Reproducibility, seeding, manifests
 
-* **Statistical Robustness: Bootstrapping**  
-  To quantify the uncertainty of the model’s learned feature importances (the coefficients $\boldsymbol{\beta}$), we used **bootstrapping**. This process involves:
-  1. Creating 100 new datasets by resampling the original data with replacement.
-  2. Training a new logistic regression model on each dataset.
-  3. Collecting the learned coefficients ($\boldsymbol{\beta}$) from all 100 models to form a distribution for each feature.  
-  From these distributions, we calculated the mean, standard deviation, and a 95% confidence interval for each feature’s importance.
+scripts/
+├── wrangling/       ← Raw CSV → processed parquets
+└── analysis/        ← Model training, tuning, drift analysis
 
-* **Drift Detection: Welch’s t-test**  
-  To determine if a feature’s importance drifted significantly between two years (e.g., 2008 vs. 2022), we compared their bootstrap distributions with **Welch’s t-test** (implemented from scratch) to test the null hypothesis that the two means are equal (significance threshold **p-value < 0.05**):  
-  $t \;=\; \dfrac{\bar{x}_1 - \bar{x}_2}{\sqrt{\dfrac{s_1^2}{N_1} + \dfrac{s_2^2}{N_2}}}$
+outputs/
+├── models/          ← Trained weights, bootstrap coefficients
+├── figures/         ← Publication-quality plots
+├── explanations/    ← IG attribution matrices
+└── audit_artifacts/ ← IV tables, drift test results
+```
 
 ---
 
-## 4. Solution & Key Findings
+## Models
 
-The project successfully developed a complete, end-to-end pipeline to analyze explanation drift. The data wrangling challenges were overcome by creating specialized, memory-efficient data loaders and a schema mapping strategy. The computational bottleneck of bootstrapping was solved by training on smaller, random subsamples.
+### Baseline — WOE Logistic Regression (from scratch)
 
-The final analysis produced a clear narrative of how the lending model’s logic evolved from 2008 to 2024:
+A credit-scoring industry-standard pipeline:
 
-* **Post-Crisis Volatility (2008–2012)**: The model’s logic was highly volatile, with the importance of key features like `loan_amount` and `occupancy_type` reversing their roles as the market reacted to the financial crisis.
-* **Period of Stabilization (2013–2017)**: The model’s logic began to stabilize, with an increasing number of features showing no significant year-over-year drift. `income` became the most dominant positive predictor of loan approval.
-* **Schema Change Shock (2017–2018)**: A major regulatory change to the HMDA data collection resulted in a large, statistically significant drift across most features, forcing the model to learn a fundamentally new logic.
-* **The “New Normal” (2019–2024)**: In the most recent period, the model’s logic reached a higher degree of stability. Key financial indicators like `income` and risk factors like `hoepa_status` showed little to no significant drift, indicating a more consistent lending environment as interpreted by the model.
+1. **Weight-of-Evidence encoding** via OptimalBinning (monotonic binning + Laplace-smoothed categorical WOE)
+2. **L2-regularized logistic regression** trained with Adam optimizer (custom NumPy implementation — no sklearn)
+3. **Platt calibration** on a held-out calibration slice
+4. **100× bootstrap** resampling for coefficient confidence intervals (warm-started from final weights for 30× speedup)
 
-This project demonstrates a robust, statistically grounded method for monitoring the explanations of machine learning models over time, providing a critical tool for ensuring the reliability and trustworthiness of AI in finance.
+### Advanced — FT-Transformer Deep Ensemble
 
-### Example Visualization: Explanation Drift (2008 vs 2024)
-![Drift Analysis 2008 vs 2024](outputs/visualizations/drift_analysis_2008_vs_2024.png)
+A modern tabular deep learning architecture:
 
+1. **FT-Transformer** ([Gorishniy et al., 2021](https://arxiv.org/abs/2106.11959)) with feature tokenization for both numeric and categorical inputs
+2. **5-member deep ensemble** with bagged subsampling (15% stratified per member) for calibrated uncertainty
+3. **Platt calibration** on held-out data
+4. **Integrated Gradients** for per-feature attribution with bootstrap resampling
+
+Both models are trained on identical features and splits for direct comparability.
+
+---
+
+## Feature Set
+
+All 17 years use the **same 15 pre-decision features** — strictly variables available at the moment of application, before any underwriting decision:
+
+| Type | Features |
+|---|---|
+| **Numeric (8)** | Loan amount, applicant income, neighborhood income ratio, area median income, loan-to-income ratio, log(loan amount), log(income), log(area median income) |
+| **Categorical (6)** | Loan purpose, lien position, property type, owner-occupied status, loan type, preapproval status |
+| **Binary (1)** | Co-applicant present |
+
+### Leakage Exclusions
+
+The following features were identified and permanently excluded as **post-decision variables** (their values or missingness are determined by the approval/denial outcome, not available at application time):
+
+- **HOEPA status** — APR/fee thresholds are only calculated for approved loans; denied loans are mass-coded "Not Applicable"
+- **Interest rate, rate spread, total loan costs, origination charges** — pricing variables that only exist after approval
+- **Debt-to-income ratio, loan-to-value ratio, loan term** — reported differently for approved vs. denied loans (NaN rate 2–3× higher for denials)
+
+Runtime guardrails in both training scripts assert that no leaked column survives in the processed data.
+
+---
+
+## The 2018 Schema Break
+
+HMDA underwent a major regulatory overhaul in 2018, completely changing column names, encoding schemes, and data definitions. This project handles the break with:
+
+- **Dual-schema loaders** (`data_loaders/`) that read pre-2018 and post-2018 CSVs independently
+- **A harmonization layer** (`features/preprocessing.py`) that maps both schemas to a unified set of canonical column names
+- **Uniform feature space** — by excluding post-2018-only columns, the model sees identical features across all 17 years
+
+This design means any detected drift reflects **real macroeconomic and population shifts**, not schema artifacts.
+
+---
+
+## Pipeline Phases
+
+| Phase | Script | Description |
+|---|---|---|
+| **1 — Wrangling** | `scripts/wrangling/05_build_yearly_processed.py` | Raw CSV → cleaned parquet (handles schema break, derives features, separates protected attributes) |
+| **2 — Baseline** | `scripts/analysis/03_bootstrap_baseline.py` | WOE + Adam LR + Platt + bootstrap coefficients per year |
+| **3 — Tuning** | `scripts/analysis/04_tune_ft_transformer.py` | Optuna hyperparameter search for FT-Transformer |
+| **4 — Advanced** | `scripts/analysis/06_train_ft_ensembles.py` | FT-Transformer 5-member ensemble per year |
+| **5 — Explainability** | *(upcoming)* | Integrated Gradients + bootstrap attribution matrices |
+| **6 — Drift** | *(upcoming)* | Welch's *t*-test on bootstrap coefficient distributions across years |
+| **7 — Fairness** | *(upcoming)* | Adverse Impact Ratio analysis by race, sex, ethnicity |
+| **8 — Visualization** | *(upcoming)* | Publication-quality figures with automated captions |
+
+---
+
+## Reproducibility
+
+Every pipeline run writes a `_run_manifest.json` containing:
+
+- Git SHA, library versions, random seed
+- Feature set (raw + display names), hyperparameters
+- Train/test/cal split sizes, class balance
+- AUC, KS, Gini, F1, accuracy metrics
+- Wall-clock time, Platt calibration parameters
+
+All random operations use `seed_everything(42)` which seeds Python, NumPy, and PyTorch (including MPS).
+
+---
+
+## Setup
+
+```bash
+# Clone and create environment
+git clone <repo-url>
+cd xai-consumer-lending
+conda env create -f environment.yml
+conda activate xai-lending
+
+# Download HMDA data (not included — 186 GB)
+# Place yearly CSVs in data/raw/year_{2008..2024}.csv
+
+# Build processed parquets
+conda run -n xai-lending python scripts/wrangling/05_build_yearly_processed.py
+
+# Train baselines (all 17 years, ~5 min/year)
+conda run -n xai-lending python scripts/analysis/03_bootstrap_baseline.py
+
+# Train FT-Transformer ensembles (all 17 years)
+conda run -n xai-lending python scripts/analysis/06_train_ft_ensembles.py
+```
+
+---
+
+## Key Design Decisions
+
+1. **No raw feature names in outputs** — all visualizations, file names, and captions use human-readable display names via `src/features/display_names.py`
+2. **CPU-only for audit artifacts** — MPS/CUDA used for dev speed, but final reproducible outputs are forced to CPU (`force_cpu=True`)
+3. **Logistic regression from scratch** — custom NumPy implementation with Adam, cosine LR decay, and L2 regularization (no sklearn dependency for the core model)
+4. **WOE encoding for interpretability** — industry-standard credit scoring transform that gives coefficients a direct monotonic relationship with log-odds
+
+---
+
+## Tech Stack
+
+- **Python 3.11** (conda-managed)
+- **PyTorch** — FT-Transformer + MPS acceleration
+- **rtdl-revisiting-models** — FT-Transformer architecture (v0.0.2)
+- **NumPy / Pandas** — core numerical computing
+- **OptBinning** — monotonic WOE binning
+- **category_encoders** — categorical WOE encoding
+- **Optuna** — hyperparameter tuning
+- **scikit-learn** — StandardScaler, LabelEncoder, train_test_split
