@@ -99,3 +99,26 @@ optimized_dtypes:
     state_code: float32
     state_name: category
     tract_to_msamd_income: float32
+
+#           PIPELINE SETTINGS
+pipeline:
+  years: [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017,
+          2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  schema_break_year: 2018
+  ensemble_size: 5
+  bootstrap_explanations_B: 1000
+  bootstrap_baseline_coef_B: 100
+  bootstrap_baseline_epochs: 50
+  final_model_epochs: 200
+  lambda_l2: 1.0             # hardcoded — CV confirmed stable across all HMDA years
+  warm_start_bootstrap: true
+  ig_steps: 50
+  significance_alpha: 0.05
+  bh_fdr: 0.05
+  audit_device: cpu        # MPS only for dev; final artifacts CPU
+  seed: 42
+
+#           MLFLOW SETTINGS
+mlflow:
+  tracking_uri: file:./mlruns
+  experiment: xai-consumer-lending

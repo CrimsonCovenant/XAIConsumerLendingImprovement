@@ -1,0 +1,23 @@
+name: xai-lending
+channels: [conda-forge, pytorch]
+dependencies:
+  - python=3.11
+  - numpy<2.1
+  - pandas>=2.2
+  - scikit-learn>=1.5,<2
+  - pytorch=2.5.1
+  - pip
+  - pip:
+      - rtdl-revisiting-models
+      - rtdl-num-embeddings
+      - captum==0.8.0
+      - shap==0.46.0
+      - dice-ml==0.11
+      - category_encoders==2.8.1
+      - optbinning
+      - fairlearn
+      - pytorch-lightning==2.6.1
+      - mlflow>=2.20
+      - optuna>=4.0
+      - cmocean
+      - pyyaml
